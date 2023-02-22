@@ -1,7 +1,50 @@
+resource "openstack_networking_secgroup_v2" "runner" {
+  name                 = "${terraform.workspace}-runner-lb"
+  description          = "runner lb"
+  delete_default_rules = true
+}
+
+resource "openstack_networking_secgroup_rule_v2" "egress" {
+  direction         = "egress"
+  ethertype         = "IPv4"
+  remote_ip_prefix  = "0.0.0.0/0"
+  security_group_id = openstack_networking_secgroup_v2.runner.id
+}
+
+resource "openstack_networking_secgroup_rule_v2" "runner-lb-http" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = "80"
+  port_range_max    = "80"
+  remote_ip_prefix  = "0.0.0.0/0"
+  security_group_id = openstack_networking_secgroup_v2.runner.id
+}
+
+resource "openstack_networking_port_v2" "runner" {
+  name           = "${terraform.workspace}-runner-lb"
+  network_id     = var.network_id
+  port_security_enabled = true
+  security_group_ids = [
+    openstack_networking_secgroup_v2.runner.id
+  ]
+  no_security_groups = false
+  fixed_ip {
+    subnet_id = var.subnet_id
+  }
+}
+
 resource "openstack_lb_loadbalancer_v2" "runner" {
   name           = "${terraform.workspace}-runner"
-  vip_subnet_id  = var.subnet_id
+  vip_port_id    = openstack_networking_port_v2.runner.id
   admin_state_up = true
+  security_group_ids = [
+    openstack_networking_secgroup_v2.runner.id
+  ]
+  depends_on = [
+    openstack_networking_port_v2.runner,
+    openstack_networking_secgroup_v2.runner
+  ]
 }
 
 resource "openstack_lb_listener_v2" "runner" {

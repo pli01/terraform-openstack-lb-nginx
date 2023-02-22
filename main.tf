@@ -21,7 +21,7 @@ module "network" {
 # create one FIP on the first external network with allow_fip=true enabled
 #
 module "fips" {
-  count                   = local.enable_fip ? 1 : 0
+  count                   = local.enable_fip && var.fip == "" ? 1 : 0
   source                  = "./modules/fips"
   fip_net_name            = local.runner_fip_net
   router_id               = module.network.router_id[0]
@@ -59,9 +59,10 @@ module "runner" {
 module "lb" {
   count              = local.enable_fip ? 1 : 0
   source             = "./modules/lb"
-  runner_floating_ip = module.fips[0].runner_fips
+  runner_floating_ip = var.fip != "" ? var.fip : module.fips[0].runner_fips
   runner_address     = module.runner.runner_private_ip[*]
   subnet_id          = module.network.subnet_id
+  network_id         = module.network.network_id
   depends_on = [
     module.fips.runner_fips,
     module.runner.runner_private_ip,

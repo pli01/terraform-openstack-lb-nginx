@@ -3,6 +3,12 @@ variable "keypair_name" {
   default = ""
 }
 
+variable "fip" {
+  type    = string
+  default = ""
+}
+
+
 variable "dns_nameservers" {
   type    = list(string)
   default = ["213.186.33.99"]
